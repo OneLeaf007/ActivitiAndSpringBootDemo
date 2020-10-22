@@ -35,7 +35,7 @@ public class ProcessEngineConfig {
         conf.setJdbcUsername(username);
         conf.setJdbcPassword(password);
         //设置自动创建表
-        conf.setDatabaseSchemaUpdate("false");
+        conf.setDatabaseSchemaUpdate("true");
         //在创建引擎对象的时候自动创建表
         ProcessEngine processEngine = conf.buildProcessEngine();
         System.out.println("ProcessEngine对象======="+processEngine);

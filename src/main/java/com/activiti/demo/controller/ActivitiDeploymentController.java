@@ -3,14 +3,16 @@ package com.activiti.demo.controller;
 
 import com.activiti.demo.service.DeploymentActivitiService;
 import org.activiti.engine.ProcessEngine;
+import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.repository.Deployment;
+import org.activiti.engine.repository.ProcessDefinition;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 import java.util.Map;
 
@@ -37,8 +39,11 @@ public class ActivitiDeploymentController {
     @GetMapping("/run")
     public Deployment DeploymentActiviti(@RequestParam(value = "name",required = false) String name , HttpServletRequest httpServletRequest) {
 
-
+        if(name==null){
+            name ="请假审批流程";
+        }
         Deployment deployment =deploymentActivitiService.DeploymentActiviti("process/holiday.bpmn",name);
+
 
         System.out.println(deployment.getId());
         System.out.println(deployment.getName());
@@ -48,53 +53,79 @@ public class ActivitiDeploymentController {
     }
 
     /**
-     * 查询流程的定义部署信息
+     * 查询流程的定义信息列表（将来传递给页面进行审核选择的列表）
      * @param dpid
      * @return
      */
     @GetMapping("/query")
-    public Map DeploymentActivitiInfo(@RequestParam(value = "dpid",required = false) String dpid){
+    public List<ProcessDefinition>  DeploymentActivitiInfo(@RequestParam(value = "dpid",required = false) String dpid){
 
-        //System.out.println(processEngine.getRepositoryService().createDeploymentQuery().deploymentId("2501").singleResult());
-        Deployment deployment =  processEngine.getRepositoryService().createDeploymentQuery().deploymentId("2501").singleResult();
-        List<Deployment> list =processEngine.getRepositoryService().createDeploymentQuery().list();
-        System.out.println(deployment.getId());
-        System.out.println(deployment.getName());
-        System.out.println(deployment.getDeploymentTime());
-        System.out.println(deployment.getTenantId());
-        Map map =new HashMap();
-        map.put("id",deployment.getId());
-        map.put("name",deployment.getName());
-        map.put("time",deployment.getDeploymentTime());
-        map.put("uid",deployment.getTenantId());
-        System.out.println("list==========================="+list);
-        return map;
+        RepositoryService repositoryService = processEngine.getRepositoryService();
+        List<ProcessDefinition> list = repositoryService.createProcessDefinitionQuery().active().latestVersion().list();
+        for (ProcessDefinition processDefinition: list) {
+            System.out.println("ProcessDefinition=========" +processDefinition);
+            System.out.println(processDefinition.getName());
+            System.out.println(processDefinition.getKey());
+            System.out.println(processDefinition.getDeploymentId());
 
+        }
+        return null;
     }
 
     /**
-     * 开始一个流程 并根据流程定义 xml文件等部署流转任务
+     * 开始一个流程实例  并根据流程定义 xml文件等部署流转任务
      * @param dpid
      * @return
      */
     @GetMapping("/startAnWorkFlow")
-    public Map Deployment(@RequestParam(value = "dpid",required = false) String dpid){
+    public Map DeploymentInstance(@RequestParam(value = "dpid",required = false) String dpid){
         Deployment deployment =  processEngine.getRepositoryService().createDeploymentQuery()
-                .deploymentId("2501")
+                .deploymentId("12501")
                 .singleResult();
         String key= processEngine.getRepositoryService().
-                createProcessDefinitionQuery().
-                deploymentId("2501").
-                singleResult().
-                getKey();
+                createProcessDefinitionQuery().processDefinitionId("holiday:1:5004")
+                //deploymentId(deployment.getId()).
+                .singleResult()
+                .getKey();
         RuntimeService runtimeService = processEngine.getRuntimeService();
-        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(key);
+
+//        List<ProcessDefinition> list = processEngine.getRepositoryService().createProcessDefinitionQuery().list();
+//        for (ProcessDefinition processDefinition :list){
+//            System.out.println(processDefinition.getVersion());
+//        }
+
+        ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder().processDefinitionKey(key).start();
+
+
         System.out.println(processInstance);
 
 
         return null;
 
     }
+    /**
+     * 删除流程定义
+     *
+     *
+     */
+    @GetMapping("/deleteProcessDefinition")
+    public String deleteProcessDefinition(@RequestParam(value = "id",required = false) String id){
+        RepositoryService repositoryService =processEngine.getRepositoryService();
+        // id为部署id Deployment 的id 第二个参数设置为true 是级联删除 强制停止没有完成的任务
+        try{
+            repositoryService.deleteDeployment("2501",true);
+        }catch (Exception e){
+            if(e.getClass().getTypeName().equals(SQLIntegrityConstraintViolationException.class.getTypeName())){
+                return "该流程定义正在进行不能删除";
+            }
+            e.printStackTrace();
+            return "删除异常";
+        }
+
+
+        return "成功";
+    }
+
 
 }
 
