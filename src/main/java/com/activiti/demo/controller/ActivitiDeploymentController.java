@@ -1,13 +1,18 @@
 package com.activiti.demo.controller;
 
 
+import com.activiti.demo.service.DeploymentActivitiService;
 import org.activiti.engine.ProcessEngine;
-import org.activiti.engine.RepositoryService;
+import org.activiti.engine.RuntimeService;
 import org.activiti.engine.repository.Deployment;
+import org.activiti.engine.runtime.ProcessInstance;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author 兰陵笑笑生
@@ -22,19 +27,73 @@ public class ActivitiDeploymentController {
     @Autowired
     private ProcessEngine processEngine;
 
+    @Autowired
+    DeploymentActivitiService deploymentActivitiService;
+
+    /**
+     * 流程部署
+     * @return
+     */
     @GetMapping("/run")
-    public String DeploymentActiviti() {
-        System.out.println("ProcessEngine对象======="+processEngine);
-        RepositoryService repositoryService = processEngine.getRepositoryService();
-        Deployment deployment = repositoryService.createDeployment()
-                .addClasspathResource("holiday.bpmn")
-                .name("请假申请流程")
-                .deploy();
+    public Deployment DeploymentActiviti(@RequestParam(value = "name",required = false) String name , HttpServletRequest httpServletRequest) {
+
+
+        Deployment deployment =deploymentActivitiService.DeploymentActiviti("process/holiday.bpmn",name);
+
         System.out.println(deployment.getId());
         System.out.println(deployment.getName());
         System.out.println(deployment.getDeploymentTime());
         System.out.println(deployment.getCategory());
-        return deployment.toString();
+        return deployment;
+    }
+
+    /**
+     * 查询流程的定义部署信息
+     * @param dpid
+     * @return
+     */
+    @GetMapping("/query")
+    public Map DeploymentActivitiInfo(@RequestParam(value = "dpid",required = false) String dpid){
+
+        //System.out.println(processEngine.getRepositoryService().createDeploymentQuery().deploymentId("2501").singleResult());
+        Deployment deployment =  processEngine.getRepositoryService().createDeploymentQuery().deploymentId("2501").singleResult();
+        List<Deployment> list =processEngine.getRepositoryService().createDeploymentQuery().list();
+        System.out.println(deployment.getId());
+        System.out.println(deployment.getName());
+        System.out.println(deployment.getDeploymentTime());
+        System.out.println(deployment.getTenantId());
+        Map map =new HashMap();
+        map.put("id",deployment.getId());
+        map.put("name",deployment.getName());
+        map.put("time",deployment.getDeploymentTime());
+        map.put("uid",deployment.getTenantId());
+        System.out.println("list==========================="+list);
+        return map;
+
+    }
+
+    /**
+     * 开始一个流程 并根据流程定义 xml文件等部署流转任务
+     * @param dpid
+     * @return
+     */
+    @GetMapping("/startAnWorkFlow")
+    public Map Deployment(@RequestParam(value = "dpid",required = false) String dpid){
+        Deployment deployment =  processEngine.getRepositoryService().createDeploymentQuery()
+                .deploymentId("2501")
+                .singleResult();
+        String key= processEngine.getRepositoryService().
+                createProcessDefinitionQuery().
+                deploymentId("2501").
+                singleResult().
+                getKey();
+        RuntimeService runtimeService = processEngine.getRuntimeService();
+        ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(key);
+        System.out.println(processInstance);
+
+
+        return null;
+
     }
 
 }
@@ -43,8 +102,7 @@ public class ActivitiDeploymentController {
     /**
      * 流程定义部署的进本步骤
      */
-    // 1.创建ProcesEngine对象
-    //ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
+    // 1.创建ProcesEngine对   //ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
     // 2.得到一个RepositaryService对象实例
     //RepositoryService repositoryService = processEngine.getRepositoryService();
     // 3.进行部署
