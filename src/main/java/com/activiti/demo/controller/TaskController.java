@@ -38,13 +38,6 @@ public class TaskController {
             System.out.println(task);
         }
 
-        /**
-         * 把指定的复杂对象属性，按照指定的内容，封装到新的map中
-         * @param source 目标对象
-         * @param ps     需要封装到map中的属性
-         * @return
-         */
-
         return tasks;
     }
 
