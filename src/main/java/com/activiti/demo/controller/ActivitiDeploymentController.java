@@ -5,14 +5,19 @@ import com.activiti.demo.service.DeploymentActivitiService;
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
+import org.activiti.engine.TaskService;
 import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.repository.ProcessDefinition;
+import org.activiti.engine.runtime.Execution;
 import org.activiti.engine.runtime.ProcessInstance;
+import org.activiti.engine.task.Task;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +47,7 @@ public class ActivitiDeploymentController {
         if(name==null){
             name ="请假审批流程";
         }
-        Deployment deployment =deploymentActivitiService.DeploymentActiviti("process/holiday.bpmn",name);
+        Deployment deployment =deploymentActivitiService.deploymentActiviti("process/holiday.bpmn",name);
 
 
         System.out.println(deployment.getId());
@@ -73,32 +78,44 @@ public class ActivitiDeploymentController {
     }
 
     /**
-     * 开始一个流程实例  并根据流程定义 xml文件等部署流转任务
+     * 开始一个流程实例  根据实例流程的id 查询执行id 根据执行id 查询任务id 一个实例流程 同一时间只有一个执行
+     * 流程开始第一申请人 任务自动流转（发起成功后自动完成 发起人不需要审批）
      * @param dpid
      * @return
      */
+    @Transactional(rollbackFor = Exception.class)
     @GetMapping("/startAnWorkFlow")
     public Map DeploymentInstance(@RequestParam(value = "dpid",required = false) String dpid){
-        Deployment deployment =  processEngine.getRepositoryService().createDeploymentQuery()
-                .deploymentId("12501")
-                .singleResult();
+
+        dpid="holiday:1:4";
+
         String key= processEngine.getRepositoryService().
-                createProcessDefinitionQuery().processDefinitionId("holiday:1:5004")
-                //deploymentId(deployment.getId()).
+                createProcessDefinitionQuery().processDefinitionId(dpid).latestVersion()
                 .singleResult()
                 .getKey();
         RuntimeService runtimeService = processEngine.getRuntimeService();
 
-//        List<ProcessDefinition> list = processEngine.getRepositoryService().createProcessDefinitionQuery().list();
-//        for (ProcessDefinition processDefinition :list){
-//            System.out.println(processDefinition.getVersion());
-//        }
 
-        ProcessInstance processInstance = runtimeService.createProcessInstanceBuilder().processDefinitionKey(key).start();
+        Map map = new HashMap();
+        map.put("userId","zhangsan");
+        map.put("condtion",5);
+        try{
+            // 流程发起者提交任务成功后自动完成任务
+            System.out.println("提交表单保存成功");
+            System.out.println("同步更新系统数据库数据");
+            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(key,"holiday",map);
+            Execution execution = runtimeService.createExecutionQuery().processInstanceId(processInstance.getId()).singleResult();
 
+            TaskService taskService = processEngine.getTaskService();
 
-        System.out.println(processInstance);
+            Task task = taskService.createTaskQuery().executionId(execution.getId()).singleResult();
+            taskService.complete(task.getId());
 
+        }catch (Exception e){
+            e.printStackTrace();
+
+            return null;
+        }
 
         return null;
 

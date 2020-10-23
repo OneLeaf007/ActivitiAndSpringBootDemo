@@ -11,7 +11,7 @@ public class DeploymentActivitiService {
     @Autowired
     private ProcessEngine processEngine;
 
-    public Deployment DeploymentActiviti(String reScore ,String name){
+    public Deployment deploymentActiviti(String reScore ,String name){
 
         Deployment deployment = processEngine.getRepositoryService()
                 .createDeployment()
