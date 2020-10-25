@@ -49,7 +49,6 @@ public class ActivitiDeploymentController {
         }
         Deployment deployment =deploymentActivitiService.deploymentActiviti("process/holiday.bpmn",name);
 
-
         System.out.println(deployment.getId());
         System.out.println(deployment.getName());
         System.out.println(deployment.getDeploymentTime());
@@ -63,7 +62,7 @@ public class ActivitiDeploymentController {
      * @return
      */
     @GetMapping("/query")
-    public List<ProcessDefinition>  DeploymentActivitiInfo(@RequestParam(value = "dpid",required = false) String dpid){
+    public List<ProcessDefinition>  deploymentActivitiInfo(@RequestParam(value = "dpid",required = false) String dpid){
 
         RepositoryService repositoryService = processEngine.getRepositoryService();
         List<ProcessDefinition> list = repositoryService.createProcessDefinitionQuery().active().latestVersion().list();
@@ -85,9 +84,10 @@ public class ActivitiDeploymentController {
      */
     @Transactional(rollbackFor = Exception.class)
     @GetMapping("/startAnWorkFlow")
-    public Map DeploymentInstance(@RequestParam(value = "dpid",required = false) String dpid){
+    public Map deploymentInstance(@RequestParam(value = "dpid",required = false) String dpid, HttpServletRequest request ){
+        request.getSession();
 
-        dpid="holiday:1:4";
+        dpid="holiday:1:15004";
 
         String key= processEngine.getRepositoryService().
                 createProcessDefinitionQuery().processDefinitionId(dpid).latestVersion()
@@ -97,13 +97,13 @@ public class ActivitiDeploymentController {
 
 
         Map map = new HashMap();
-        map.put("userId","zhangsan");
-        map.put("condtion",5);
+        map.put("StartUserId","zhangsan");
+        //map.put("condtion",5);
         try{
             // 流程发起者提交任务成功后自动完成任务
             System.out.println("提交表单保存成功");
             System.out.println("同步更新系统数据库数据");
-            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(key,"holiday",map);
+            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("holiday",map);
             Execution execution = runtimeService.createExecutionQuery().processInstanceId(processInstance.getId()).singleResult();
 
             TaskService taskService = processEngine.getTaskService();

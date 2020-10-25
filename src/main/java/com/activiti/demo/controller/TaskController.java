@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/activitiTask")
@@ -46,10 +48,12 @@ public class TaskController {
 
     @GetMapping("/completed")
     public String compeletedTask(@RequestParam(value = "id",required = false) String id){
+        id="20002";
         ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
         TaskService  taskService = processEngine.getTaskService();
-        taskService.complete(id);
-        return null;
+        Map map =  new HashMap();
+        taskService.complete(id,map);
+        return "完成任务";
     }
 
 }
