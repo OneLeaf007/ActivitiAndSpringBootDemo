@@ -8,7 +8,6 @@ import org.activiti.engine.RuntimeService;
 import org.activiti.engine.TaskService;
 import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.repository.ProcessDefinition;
-import org.activiti.engine.runtime.Execution;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +34,7 @@ public class ActivitiDeploymentController {
     private ProcessEngine processEngine;
 
     @Autowired
-    DeploymentActivitiService deploymentActivitiService;
+        DeploymentActivitiService deploymentActivitiService;
 
     /**
      * 流程部署
@@ -45,9 +44,9 @@ public class ActivitiDeploymentController {
     public Deployment DeploymentActiviti(@RequestParam(value = "name",required = false) String name , HttpServletRequest httpServletRequest) {
 
         if(name==null){
-            name ="请假审批流程";
+            name ="并行会签审批测试";
         }
-        Deployment deployment =deploymentActivitiService.deploymentActiviti("process/holiday.bpmn",name);
+        Deployment deployment =deploymentActivitiService.deploymentActiviti("process/PHoliday.bpmn",name);
 
         System.out.println(deployment.getId());
         System.out.println(deployment.getName());
@@ -73,6 +72,7 @@ public class ActivitiDeploymentController {
             System.out.println(processDefinition.getDeploymentId());
 
         }
+
         return null;
     }
 
@@ -87,29 +87,44 @@ public class ActivitiDeploymentController {
     public Map deploymentInstance(@RequestParam(value = "dpid",required = false) String dpid, HttpServletRequest request ){
         request.getSession();
 
-        dpid="holiday:1:15004";
+        dpid="myProcess_1:3:37504";
 
         String key= processEngine.getRepositoryService().
                 createProcessDefinitionQuery().processDefinitionId(dpid).latestVersion()
                 .singleResult()
                 .getKey();
+
+        // 设置流程开启人
+        processEngine.getIdentityService().setAuthenticatedUserId("zhangsan");
+
         RuntimeService runtimeService = processEngine.getRuntimeService();
 
 
         Map map = new HashMap();
-        map.put("StartUserId","zhangsan");
+
+        // 页面传入参数
+        map.put("StartUser","zhangsan");
+        map.put("holidayNum",5);
+        // 会签审批组人员集合
+        List list = new ArrayList();
+        list.add("a");
+        list.add("b");
+        list.add("c");
+        map.put("userList",list);
         //map.put("condtion",5);
         try{
             // 流程发起者提交任务成功后自动完成任务
             System.out.println("提交表单保存成功");
             System.out.println("同步更新系统数据库数据");
-            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("holiday",map);
-            Execution execution = runtimeService.createExecutionQuery().processInstanceId(processInstance.getId()).singleResult();
+            ProcessInstance processInstance = runtimeService.startProcessInstanceByKey(key,map);
+            //Execution execution = runtimeService.createExecutionQuery().processInstanceId(processInstance.getId()).singleResult();
 
             TaskService taskService = processEngine.getTaskService();
+            List<Task> tasks = taskService.createTaskQuery().processInstanceId(processInstance.getId()).list();
 
-            Task task = taskService.createTaskQuery().executionId(execution.getId()).singleResult();
-            taskService.complete(task.getId());
+
+            //Task task = taskService.createTaskQuery().executionId(execution.getId()).singleResult();
+            taskService.complete(tasks.get(0).getId());
 
         }catch (Exception e){
             e.printStackTrace();
@@ -127,21 +142,28 @@ public class ActivitiDeploymentController {
      */
     @GetMapping("/deleteProcessDefinition")
     public String deleteProcessDefinition(@RequestParam(value = "id",required = false) String id){
-        RepositoryService repositoryService =processEngine.getRepositoryService();
-        // id为部署id Deployment 的id 第二个参数设置为true 是级联删除 强制停止没有完成的任务
-        try{
-            repositoryService.deleteDeployment("2501",true);
-        }catch (Exception e){
-            if(e.getClass().getTypeName().equals(SQLIntegrityConstraintViolationException.class.getTypeName())){
-                return "该流程定义正在进行不能删除";
-            }
-            e.printStackTrace();
-            return "删除异常";
-        }
+//        RepositoryService repositoryService =processEngine.getRepositoryService();
+//        // id为部署id Deployment 的id 第二个参数设置为true 是级联删除 强制停止没有完成的任务
+//        try{
+//            repositoryService.deleteDeployment("2501",true);
+//        }catch (Exception e){
+//            if(e.getClass().getTypeName().equals(SQLIntegrityConstraintViolationException.class.getTypeName())){
+//                return "该流程定义正在进行不能删除";
+//            }
+//            e.printStackTrace();
+//            return "删除异常";
+//        }
+//
+//
+//        return "成功";
+        TaskService taskService = processEngine.getTaskService();
 
 
-        return "成功";
+        List<Task> tasks = taskService.createTaskQuery().processInstanceId("2501").list();
+        return null;
     }
+
+
 
 
 }

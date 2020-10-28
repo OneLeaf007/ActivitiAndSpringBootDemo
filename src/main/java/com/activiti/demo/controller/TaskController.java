@@ -45,10 +45,11 @@ public class TaskController {
 
 
 
-
+    // 代办任务 就是ru_task表 肯定能拿到id
     @GetMapping("/completed")
     public String compeletedTask(@RequestParam(value = "id",required = false) String id){
-        id="20002";
+        //id="5003";
+        System.out.println(id);
         ProcessEngine processEngine = ProcessEngines.getDefaultProcessEngine();
         TaskService  taskService = processEngine.getTaskService();
         Map map =  new HashMap();
