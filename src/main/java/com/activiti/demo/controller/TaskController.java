@@ -1,9 +1,12 @@
 package com.activiti.demo.controller;
 
 
-import org.activiti.engine.ProcessEngine;
-import org.activiti.engine.ProcessEngines;
-import org.activiti.engine.TaskService;
+import com.activiti.demo.service.JumpCmd;
+import org.activiti.engine.*;
+import org.activiti.engine.history.HistoricTaskInstance;
+import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntity;
+import org.activiti.engine.impl.pvm.process.ActivityImpl;
+import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +36,7 @@ public class TaskController {
             name="lisi";
         }
         TaskService taskService = processEngine.getTaskService();
-        List<Task> tasks = taskService.createTaskQuery().taskAssignee(name).active()
+        List<Task> tasks = taskService.createTaskQuery().taskAssignee(name)
                 .list();
         for (Task task:tasks
              ) {
@@ -55,6 +58,37 @@ public class TaskController {
         Map map =  new HashMap();
         taskService.complete(id,map);
         return "完成任务";
+    }
+
+    /**
+     * 工作流自由跳转
+     * @param taskId 要跳转到的节点名称
+     * @return
+     */
+    @GetMapping("/taskRollback")
+    public String taskRollback(@RequestParam ("taskId") String taskId){
+        HistoryService historyService = processEngine.getHistoryService();
+
+        RuntimeService runtimeService = processEngine.getRuntimeService();
+
+        RepositoryService repositoryService = processEngine.getRepositoryService();
+
+        ManagementService managementService = processEngine.getManagementService();
+
+
+        //根据要跳转的任务ID获取其任务
+        HistoricTaskInstance hisTask = historyService.createHistoricTaskInstanceQuery().taskId(taskId).singleResult();
+        String taskAssignee = hisTask.getAssignee();
+        //进而获取流程实例
+        ProcessInstance instance = runtimeService.createProcessInstanceQuery().processInstanceId(hisTask.getProcessInstanceId()).singleResult();
+        //取得流程定义
+        ProcessDefinitionEntity definition = (ProcessDefinitionEntity) repositoryService.getProcessDefinition(hisTask.getProcessDefinitionId());
+        //获取历史任务的Activity
+        ActivityImpl hisActivity = definition.findActivity(hisTask.getTaskDefinitionKey());
+        //实现跳转
+
+        managementService.executeCommand(new JumpCmd(instance.getId(), hisActivity.getId()));
+        return hisTask.getProcessInstanceId();
     }
 
 }
