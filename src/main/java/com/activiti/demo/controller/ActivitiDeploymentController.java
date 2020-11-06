@@ -10,11 +10,17 @@ import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.repository.ProcessDefinition;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,6 +141,31 @@ public class ActivitiDeploymentController {
         return null;
 
     }
+    @GetMapping("/test")
+    public void test(HttpServletResponse response){
+        try{
+            InputStream inputStream = new FileInputStream("E:\\test.png");
+            OutputStream outputStream = response.getOutputStream();
+            byte[] b = new byte[1024];
+            int len;
+            while((len=inputStream.read())!=-1){
+
+                outputStream.write(len);
+            }
+
+
+            //IOUtils.copy(inputStream,outputStream);
+            inputStream.close();
+            outputStream.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+
+
+        }
+
+
+    }
     /**
      * 删除流程定义
      *
@@ -162,6 +193,7 @@ public class ActivitiDeploymentController {
         List<Task> tasks = taskService.createTaskQuery().processInstanceId("2501").list();
         return null;
     }
+
 
 
 
